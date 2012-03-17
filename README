@@ -1,1 +1,6 @@
 github 的第一个尝试 LINUX_PAINTING 一个小小的画图程序
+    SSH  Read+Write access ： git@github.com:Turalyon/LINUX_PAINTING.git
+    HTTP Read+Write access  ：https://Turalyon@github.com/Turalyon/LINUX_PAINTING.git
+    Git Read-Only ： git://github.com/Turalyon/LINUX_PAINTING.git
+
+
