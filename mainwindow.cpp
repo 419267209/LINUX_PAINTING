@@ -1,21 +1,264 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "donewdialog.h"
+#include <QMessageBox>
+#include <QFileDialog>
+#include <QPainter>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    resize(750,500);//ä¸»çª—å£å¤§å°
+    resize(700,500);   //Ö÷´°¿Ú´óÐ¡ÉèÎª700*500
     area = new PaintArea;
     scrollArea = new QScrollArea;
-    scrollArea->setBackgroundRole(QPalette::Dark);//scrollAreaèƒŒæ™¯é¢œè‰²ä¸ºé»‘è‰²
-    scrollArea->setWidget(area);//æ·»åŠ ç”»å¸ƒ
-    scrollArea->widget()->setMinimumSize(800,600);//scrollAreaåˆå§‹å¤§å°
-    setCentralWidget(scrollArea);//ç½®scrollAreaäºŽä¸»çª—å£ä¸­å¿ƒ
+    scrollArea->setBackgroundRole(QPalette::Dark);   //scrollArea¶ÔÏóµÄ±³¾°É«ÉèÎªDark
+    scrollArea->setWidget(area);     //½«»­²¼Ìí¼Óµ½scrollAreaÖÐ
+    scrollArea->widget()->setMinimumSize(800,600);  //scrollArea³õÊ¼»¯´óÐ¡ÉèÎª800*600
+
+    setCentralWidget(scrollArea);    //½«scrollArea¼ÓÈëµ½Ö÷´°¿ÚµÄÖÐÐÄÇø
+    isSaved = false;
+    curFile = tr("Î´ÃüÃû.png");
+
+    creatColorComboBox(ui->penColorComboBox);   //»­±ÊÑÕÉ«×éºÏ¿ò
+    creatColorComboBox(ui->brushColorComboBox);   //Ìî³äÑÕÉ«×éºÏ¿ò
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void MainWindow::changeEvent(QEvent *e)
+{
+    QMainWindow::changeEvent(e);
+    switch (e->type()) {
+    case QEvent::LanguageChange:
+        ui->retranslateUi(this);
+        break;
+    default:
+        break;
+    }
+}
+
+
+void MainWindow::doOpen()
+{
+    if (maybeSave())
+    {
+         QString fileName = QFileDialog::getOpenFileName(this,
+                                    tr("´ò¿ªÎÄ¼þ"), QDir::currentPath());
+         if (!fileName.isEmpty())
+         {
+             area->openImage(fileName);
+             scrollArea->widget()->resize(area->getImageSize());
+             //»ñµÃÍ¼Æ¬µÄ´óÐ¡£¬È»ºó¸ü¸ÄscrollAreaµÄ´óÐ¡
+             isSaved = true;
+             curFile = fileName;
+         }
+    }
+}
+void MainWindow::doNew()
+{
+    if(maybeSave())
+    {
+        DoNewDialog dlg;
+        if(dlg.exec() == QDialog::Accepted)
+        {
+            int width = dlg.getWidth();
+            int height = dlg.getHeight();
+            area->setImageSize(width,height);
+            scrollArea->widget()->resize(width,height);
+            area->setImageColor(dlg.getBackColor());
+            isSaved = false;
+        }
+    }
+}
+
+bool MainWindow::maybeSave()
+{
+    if(area->isModified())
+    {
+        QMessageBox::StandardButton box;
+        box = QMessageBox::warning(this,tr("±£´æÎÄ¼þ"),tr("Í¼Æ¬ÒÑ¾­¸Ä±ä£¬ÊÇ·ñ±£´æ£¿"),
+                                   QMessageBox::Yes|QMessageBox::No|QMessageBox::Cancel);
+        if(box == QMessageBox::Yes)
+        {
+            return doFileSave();
+        }
+        else if(box == QMessageBox::Cancel)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool MainWindow::doFileSave()
+{
+    if(isSaved)
+    {
+        return saveFile(curFile);
+    }
+    else  return doFileSaveAs();
+}
+
+bool MainWindow::saveFile(QString fileName)
+{
+    if(area->saveImage(fileName,"png"))
+    {
+        isSaved = true;
+        return true;
+    }
+    else return false;
+}
+
+bool MainWindow::doFileSaveAs()
+{
+    QString fileName = QFileDialog::getSaveFileName(this,tr("Áí´æÎª"),curFile);
+    if(fileName.isEmpty())
+    {
+        return false;
+    }
+    else return saveFile(fileName);
+}
+
+void MainWindow::on_action_N_triggered()  //ÐÂ½¨²Ëµ¥
+{
+   doNew();
+}
+
+void MainWindow::on_action_O_triggered()  //´ò¿ª²Ëµ¥
+{
+    doOpen();
+}
+
+void MainWindow::on_action_S_triggered()  //±£´æ²Ëµ¥
+{
+    doFileSave();
+}
+
+void MainWindow::on_action_A_triggered()  //Áí´æÎª²Ëµ¥
+{
+    doFileSaveAs();
+}
+
+void MainWindow::on_action_X_triggered()   //ÍË³ö²Ëµ¥
+{
+    if(maybeSave())
+        qApp->quit();
+}
+
+void MainWindow::closeEvent(QCloseEvent *event)   //¹Ø±ÕÊÂ¼þ
+{
+    if(maybeSave())
+        qApp->quit();
+    else event->ignore();
+}
+
+void MainWindow::on_action_P_triggered()  //´òÓ¡²Ëµ¥
+{
+    area->doPrint();
+}
+
+void MainWindow::on_action_4_triggered()    //·Å´ó²Ëµ¥
+{
+    area->zoomIn();
+    scrollArea->widget()->resize(area->getImageSize());
+    //»ñµÃÍ¼Æ¬µÄ´óÐ¡£¬È»ºó¸ü¸ÄscrollAreaµÄ´óÐ¡
+}
+
+void MainWindow::on_action_5_triggered()    //ËõÐ¡²Ëµ¥
+{
+    area->zoomOut();
+}
+
+void MainWindow::on_action_6_triggered()    //»¹Ô­²Ëµ¥
+{
+    area->zoom_1();
+}
+
+void MainWindow::on_action_7_triggered()    //Ðý×ª²Ëµ¥
+{
+    area->doRotate();
+}
+
+void MainWindow::on_action_8_triggered()    //À­Éì²Ëµ¥
+{
+    area->doShear();
+}
+
+void MainWindow::on_action_10_triggered()    //Çå¿Õ²Ëµ¥
+{
+    area->doClear();
+}
+
+void MainWindow::on_action_11_triggered()   //»æÍ¼¹¤¾ßÀ¸²Ëµ¥
+{
+    ui->dockWidget->show();
+}
+
+void MainWindow::creatColorComboBox(QComboBox *comboBox)
+{
+    QPixmap pix(16,16);
+    QPainter painter(&pix);
+
+    painter.fillRect(0,0,16,16,Qt::black);   //ÏÈ»æÖÆÒ»¸ö16*16µÄÐ¡Í¼Æ¬£¬È»ºó¸øÆäÍ¿É«
+    comboBox->addItem(QIcon(pix),tr("ºÚÉ«"),Qt::black);   //ÔÙÓÃ¸ÃÍ¼Æ¬×÷Îª×éºÏ¿òÌõÄ¿µÄÍ¼±ê
+    painter.fillRect(0,0,16,16,Qt::white);
+    comboBox->addItem(QIcon(pix),tr("°×É«"),Qt::white);
+    painter.fillRect(0,0,16,16,Qt::red);
+    comboBox->addItem(QIcon(pix),tr("ºìÉ«"),Qt::red);
+    painter.fillRect(0,0,16,16,Qt::green);
+    comboBox->addItem(QIcon(pix),tr("ÂÌÉ«"),Qt::green);
+    painter.fillRect(0,0,16,16,Qt::blue);
+    comboBox->addItem(QIcon(pix),tr("À¶É«"),Qt::blue);
+    painter.fillRect(0,0,16,16,Qt::yellow);
+    comboBox->addItem(QIcon(pix),tr("»ÆÉ«"),Qt::yellow);
+
+    comboBox->addItem(tr("ÎÞÑÕÉ«"),Qt::transparent);  //¼´Í¸Ã÷
+}
+
+void MainWindow::on_shapeComboBox_currentIndexChanged(QString shape) //Ñ¡ÔñÍ¼ÐÎ×éºÏ¿ò
+{
+    if(shape == tr("ÎÞ"))
+        area->setShape(PaintArea::None);   //ÀûÓÃPaintAreaÀàÖÐµÄÃ¶¾Ù±äÁ¿
+    else if(shape == tr("¾ØÐÎ"))
+        area->setShape(PaintArea::Rectangle);
+    else if(shape == tr("Ö±Ïß"))
+        area->setShape(PaintArea::Line);
+    else if(shape == tr("ÍÖÔ²"))
+        area->setShape(PaintArea::Ellipse);
+}
+
+void MainWindow::on_penStyleComboBox_currentIndexChanged(QString style)   //»­±Ê·ç¸ñ×éºÏ¿ò
+{
+    if(style == tr("ÊµÏß"))
+    {
+        area->setPenStyle(Qt::SolidLine);
+    }
+    else if(style == tr("µãÏß"))
+    {
+        area->setPenStyle(Qt::DotLine);
+    }
+}
+
+void MainWindow::on_penWidthSpinBox_valueChanged(int width)   //»­±ÊÏß¿í×éºÏ¿ò
+{
+    area->setPenWidth(width);
+}
+
+void MainWindow::on_penColorComboBox_currentIndexChanged(int index)   //»­±ÊÑÕÉ«×éºÏ¿ò
+{
+    QColor color = ui->penColorComboBox->itemData(index,Qt::UserRole).value<QColor>();
+
+    area->setPenColor(color);
+}
+
+void MainWindow::on_brushColorComboBox_currentIndexChanged(int index)   //Ìî³äÑÕÉ«×éºÏ¿ò
+{
+    QColor color = ui->brushColorComboBox->itemData(index,Qt::UserRole).value<QColor>();
+
+    area->setBrushColor(color);
 }

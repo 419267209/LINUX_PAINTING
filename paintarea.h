@@ -2,16 +2,69 @@
 #define PAINTAREA_H
 
 #include <QWidget>
-/*ç”»å¸ƒç±»ç›¸å…³å®šä¹‰ï¼ŒåŠŸèƒ½å®ç°---->paintarea.cpp*/
+#include <QMouseEvent>
+#include <QPoint>
 class PaintArea : public QWidget
 {
 public:
     PaintArea();
-protected:
-    void paintEvent(QPaintEvent *);//é‡ç»˜äº‹ä»¶
-private:
-    QImage image;//QImageç±»å¯¹è±¡ï¼Œå³ç”»å¸ƒå¯¹è±¡
-    QRgb background_color;//QRgbç±»å¯¹è±¡ï¼Œç”»å¸ƒèƒŒæ™¯é¢œè‰²
-};
+    void setImageSize(int width,int height);
+    void setImageColor(QColor color);
 
+    bool isModified() const { return modified; }  //ÅĞ¶Ï»­²¼ÄÚÈİÊÇ·ñ±»¸ü¸Ä¹ı
+    bool saveImage(const QString &fileName, const char *fileFormat); //±£´æÍ¼Æ¬
+    bool openImage(const QString &fileName);  //´ò¿ªÍ¼Æ¬
+
+    QSize getImageSize();
+    void doPrint();
+
+    void zoomIn();    //·Å´ó
+    void zoomOut();   //ËõĞ¡
+    void zoom_1();    //»¹Ô­
+    void doRotate();   //Ğı×ª
+    void doShear();    //À­Éì
+    void doClear();    //Çå¿Õ
+
+    void setPenStyle(Qt::PenStyle style); //ÉèÖÃ»­±Ê·ç¸ñ
+    void setPenWidth(int width);   //ÉèÖÃ»­±Ê¿í¶È
+    void setPenColor(QColor color);   //ÉèÖÃ»­±ÊÑÕÉ«
+    void setBrushColor(QColor color);   //ÉèÖÃÌî³äÑÕÉ«
+
+    enum ShapeType   //Ã¶¾Ù±äÁ¿£¬¼¸¸öÍ¼ĞÎµÄÑ¡Ôñ
+    {
+        None,     //Ã»ÓĞÍ¼ĞÎ
+        Line,     //Ö±Ïß
+        Rectangle,    //¾ØĞÎ
+        Ellipse    //ÍÖÔ²
+    };
+    void setShape(ShapeType shape);  //ÉèÖÃÒª»æÖÆµÄÍ¼ĞÎ
+
+protected:
+    void paintEvent(QPaintEvent *);   //ÖØ»æÊÂ¼ş
+    void mousePressEvent(QMouseEvent *);  //Êó±ê°´ÏÂÊÂ¼ş
+    void mouseMoveEvent(QMouseEvent *);   //Êó±êÒÆ¶¯ÊÂ¼ş
+    void mouseReleaseEvent(QMouseEvent *);   //Êó±êÊÍ·ÅÊÂ¼ş
+
+    void paint(QImage& theImage);   //½øĞĞ»æÖÆ
+private:
+    QImage image;    //QImageÀà¶ÔÏó£¬ÓÃÓÚÔÚÆäÉÏ»æÍ¼
+    QRgb backColor;  //QRgbÑÕÉ«¶ÔÏó£¬´æ´¢imageµÄ±³¾°É«
+
+    QPoint lastPoint,endPoint; //¶¨ÒåÁ½¸ö×ø±ê¶ÔÏó´æ·ÅÊó±êÖ¸ÕëµÄÇ°ºóÁ½¸ö×ø±ê
+    bool modified;   //±êÖ¾»­²¼ÊÇ·ñ±»¸ü¸Ä¹ı
+
+    qreal scale;   //Ëõ·ÅÁ¿
+    int angle;     //½Ç¶È
+    qreal shear;   //À­ÉìÁ¿
+
+    QColor penColor;    //»­±ÊÑÕÉ«
+    QColor brushColor;   //Ìî³äÑÕÉ«
+    int penWidth;     //»­±Ê¿í¶È
+    Qt::PenStyle penStyle;    //»­±Ê·ç¸ñ
+
+    ShapeType curShape;    //µ±Ç°Í¼ĞÎ
+
+    QImage tempImage;   //ÁÙÊ±»æÍ¼Çø
+    bool isDrawing;     //ÊÇ·ñÔÚ»æÖÆÌØÊâÍ¼ĞÎ
+};
 #endif // PAINTAREA_H

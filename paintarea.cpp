@@ -1,17 +1,265 @@
 #include "paintarea.h"
 #include <QPainter>
-/*åˆ©ç”¨Qté‡ŒQPainteråº“é‡Œå‡½æ•°ï¼ŒåŠ å…¥QPainterå¤´æ–‡ä»¶*/
+#include <QPrintDialog>
+#include <QPrinter>
 
-/*åˆå§‹åŒ–*/
 PaintArea::PaintArea()
 {
-    image = QImage(450,300,QImage::Format_RGB32);//å®šä¹‰ç”»å¸ƒåˆå§‹å¤§å°ï¼Œä½¿ç”¨32ä½é¢œè‰²
-    background_color = qRgb(255,255,255);//èƒŒæ™¯é¢œè‰²ä¸ºç™½è‰²
-    image.fill(background_color);
+    image = QImage(400,300,QImage::Format_RGB32);  //»­²¼µÄ³õÊ¼»¯´óÐ¡ÉèÎª400*300£¬Ê¹ÓÃ32Î»ÑÕÉ«
+    backColor = qRgb(255,255,255);    //»­²¼³õÊ¼»¯±³¾°É«Ê¹ÓÃ°×É«
+    image.fill(backColor);
+    modified = false;
+
+    scale = 1;
+    angle = 0;
+    shear = 0;
+
+    penColor = Qt::black;
+    brushColor = Qt::black;
+    penWidth = 1;
+    penStyle = Qt::SolidLine;
+    curShape = None;
+
+    isDrawing = false;
 }
-/*é‡ç»˜å‡½æ•°*/
+
 void PaintArea::paintEvent(QPaintEvent *)
 {
     QPainter painter(this);
-    painter.drawImage(0,0,image);//åæ ‡ï¼Œå¯¹è±¡
+    painter.scale(scale,scale);
+    if(isDrawing)   //Èç¹ûÕýÔÚ»æÖÆÌØÊâÍ¼ÐÎ£¬ÔòÏÔÊ¾ÁÙÊ±»æÍ¼ÇøÉÏµÄÄÚÈÝ
+    {
+        painter.drawImage(0,0,tempImage);
+    }
+    else
+    {
+        if(angle)
+        {
+            QImage copyImage = image;  //ÐÂ½¨ÁÙÊ±µÄcopyImage£¬ÀûÓÃËü½øÐÐÐý×ª²Ù×÷
+            QPainter pp(&copyImage);
+            QPointF center(copyImage.width()/2.0,copyImage.height()/2.0);
+            pp.translate(center);
+            pp.rotate(angle);
+            pp.translate(-center);
+            pp.drawImage(0,0,image);
+            image = copyImage;   //Ö»»á¸´ÖÆÍ¼Æ¬ÉÏµÄÄÚÈÝ£¬²»»á¸´ÖÆ×ø±êÏµÍ³
+            angle = 0;   //Íê³ÉÐý×ªºó½«½Ç¶ÈÖµÖØÐÂÉèÎª0
+        }
+        if(shear)
+        {
+            QImage copyImage = image;
+            QPainter pp(&copyImage);
+            pp.shear(shear,shear);
+            pp.drawImage(0,0,image);
+            image = copyImage;
+            shear = 0;
+        }
+        painter.drawImage(0,0,image);
+    }
 }
+
+void PaintArea::mousePressEvent(QMouseEvent *event)
+{
+    if(event->button() == Qt::LeftButton)  //µ±Êó±ê×ó¼ü°´ÏÂ
+    {
+        lastPoint = event->pos();   //»ñµÃÊó±êÖ¸ÕëµÄµ±Ç°×ø±ê×÷ÎªÆðÊ¼×ø±ê  
+        isDrawing = true;     
+    }
+}
+void PaintArea::mouseMoveEvent(QMouseEvent *event)
+{
+    if(event->buttons()&Qt::LeftButton)   //Èç¹ûÊó±ê×ó¼ü°´×ÅµÄÍ¬Ê±ÒÆ¶¯Êó±ê
+    {
+        endPoint = event->pos();  //»ñµÃÊó±êÖ¸ÕëµÄµ±Ç°×ø±ê×÷ÎªÖÕÖ¹×ø±ê
+        if(curShape == None)   //Èç¹û²»½øÐÐÌØÊâÍ¼ÐÎ»æÖÆ£¬ÔòÖ±½ÓÔÚimageÉÏ»æÖÆ
+        {
+            isDrawing = false;
+            paint(image);
+        }
+        else     //Èç¹û»æÖÆÌØÊâÍ¼ÐÎ£¬ÔòÔÚÁÙÊ±»æÍ¼ÇøtempImageÉÏ»æÖÆ
+        { 
+            tempImage = image;    //Ã¿´Î»æÖÆtempImageÇ°ÓÃÉÏÒ»´ÎimageÖÐµÄÍ¼Æ¬¶ÔÆä½øÐÐÌî³ä
+            paint(tempImage);
+        }
+    }
+}
+void PaintArea::mouseReleaseEvent(QMouseEvent *event)
+{
+    if(event->button() == Qt::LeftButton)   //Èç¹ûÊó±ê×ó¼üÊÍ·Å
+    {
+        endPoint = event->pos();
+        isDrawing = false;
+        paint(image);
+    }
+}
+
+void PaintArea::paint(QImage &theImage)
+{
+    QPainter pp(&theImage);   //ÔÚtheImageÉÏ»æÍ¼
+    QPen pen = QPen();
+    pen.setColor(penColor);
+    pen.setStyle(penStyle);
+    pen.setWidth(penWidth);
+    QBrush brush = QBrush(brushColor);
+    pp.setPen(pen);
+    pp.setBrush(brush);
+
+    int x,y,w,h;
+    x = lastPoint.x()/scale;
+    y = lastPoint.y()/scale;
+    w = endPoint.x()/scale - x;
+    h = endPoint.y()/scale - y;
+
+    switch(curShape)
+    {
+    case None:
+        {
+            pp.drawLine(lastPoint/scale,endPoint/scale);   //ÓÉÆðÊ¼×ø±êºÍÖÕÖ¹×ø±ê»æÖÆÖ±Ïß
+            lastPoint = endPoint;  //ÈÃÖÕÖ¹×ø±ê±äÎªÆðÊ¼×ø±ê
+            break;
+        }
+    case Line:
+        {
+            pp.drawLine(lastPoint/scale,endPoint/scale);
+            break;
+        }
+    case Rectangle:
+        {
+            pp.drawRect(x,y,w,h);
+            break;
+        }
+    case Ellipse:
+        {
+            pp.drawEllipse(x,y,w,h);
+            break;
+        }
+    }
+    update();   //½øÐÐ¸üÐÂ½çÃæÏÔÊ¾£¬¿ÉÒýÆð´°¿ÚÖØ»æÊÂ¼þ£¬ÖØ»æ´°¿Ú
+    modified = true;
+}
+
+void PaintArea::setImageSize(int width, int height)
+{
+    QImage newImage(width,height,QImage::Format_RGB32);
+    image = newImage;
+    update();
+}
+
+void PaintArea::setImageColor(QColor color)
+{
+    backColor = color.rgb();  //ÒòÎªimageµÄ±³¾°É«ÒªÓÃQRgbÀàÐÍµÄÑÕÉ«£¬ËùÒÔÕâÀï½øÐÐÁËÒ»ÏÂ×ª»»
+    image.fill(backColor);
+    update();
+}
+
+bool PaintArea::saveImage(const QString &fileName, const char *fileFormat)
+{
+    QImage visibleImage = image;
+
+    if (visibleImage.save(fileName, fileFormat))   //ÊµÏÖÁËÎÄ¼þ´æ´¢
+    {
+        modified = false;
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+bool PaintArea::openImage(const QString &fileName)
+{
+    QImage loadedImage;
+    if (!loadedImage.load(fileName))
+        return false;
+
+    QSize newSize = loadedImage.size();
+    setImageSize(newSize.width(),newSize.height());
+    image = loadedImage;
+
+    modified = false;
+    update();
+    return true;
+}
+
+QSize PaintArea::getImageSize()
+{
+    return image.size()*scale;
+}
+
+void PaintArea::doPrint()
+ {
+     QPrinter printer(QPrinter::HighResolution);
+
+     QPrintDialog *printDialog = new QPrintDialog(&printer, this);
+     if (printDialog->exec() == QDialog::Accepted)
+     {
+         QPainter painter(&printer);
+         QRect rect = painter.viewport();
+         QSize size = image.size();
+         size.scale(rect.size(), Qt::KeepAspectRatio);
+         painter.setViewport(rect.x(), rect.y(), size.width(), size.height());
+         painter.setWindow(image.rect());
+         painter.drawImage(0, 0, image);
+     }
+ }
+
+void PaintArea::zoomIn()
+{
+    scale*=1.2;
+    update();
+}
+
+void PaintArea::zoomOut()
+{
+    scale/=1.2;
+    update();
+}
+
+void PaintArea::zoom_1()
+{
+    scale = 1;
+    update();
+}
+
+void PaintArea::doRotate()
+{
+    angle +=90;
+    update();
+}
+
+void PaintArea::doShear()
+{
+    shear = 0.2;
+    update();
+}
+
+void PaintArea::doClear()
+{
+    image.fill(backColor);    //ÓÃÏÖÔÚµÄ»­²¼±³¾°É«½øÐÐÌî³ä
+    update();
+}
+
+
+void PaintArea::setPenStyle(Qt::PenStyle style)
+{
+   penStyle = style;
+}
+void PaintArea::setPenWidth(int width)
+{
+    penWidth = width;
+}
+void PaintArea::setPenColor(QColor color)
+{
+    penColor = color;
+}
+
+void PaintArea::setBrushColor(QColor color)
+{
+    brushColor = color;
+}
+
+void PaintArea::setShape(ShapeType shape)
+{
+    curShape = shape;
+}
+

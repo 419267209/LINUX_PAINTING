@@ -2,28 +2,61 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-
-#include <paintarea.h>
+#include "paintarea.h"
 #include <QScrollArea>
+#include <QComboBox>
 
-/*æ·»åŠ painterareaåˆ°ä¸»ç•Œé¢*/
 namespace Ui {
-class MainWindow;
+    class MainWindow;
 }
 
-class MainWindow : public QMainWindow
-{
+class MainWindow : public QMainWindow {
     Q_OBJECT
-    
 public:
-    explicit MainWindow(QWidget *parent = 0);
+    MainWindow(QWidget *parent = 0);
     ~MainWindow();
-    
+    void doNew();    //ĞÂ½¨ÎÄ¼ş²Ù×÷
+    void doOpen();   //´ò¿ªÎÄ¼ş²Ù×÷
+    bool doFileSave();   //±£´æÎÄ¼ş²Ù×÷
+    bool doFileSaveAs();   //ÎÄ¼şÁí´æÎª²Ù×÷
+
+    void creatColorComboBox(QComboBox *comboBox);  //¹¹½¨ÑÕÉ«×éºÏ¿ò
+
+protected:
+    void changeEvent(QEvent *e);
+    void closeEvent(QCloseEvent *);
+
 private:
     Ui::MainWindow *ui;
+    PaintArea *area;
+    QScrollArea *scrollArea;
 
-    PaintArea *area;//å®šä¹‰area
-    QScrollArea *scrollArea;//æ»šåŠ¨æ¡
+    bool isSaved;   //±êÖ¾ÎÄ¼şÊÇ·ñ±£´æ¹ı
+    QString curFile;  //±£´æµ±Ç°ÎÄ¼şµÄÂ·¾¶
+    bool maybeSave();   //ÊÇ·ñ±£´æÎÄ¼ş
+
+    bool saveFile(QString fileName);   //ÊµÏÖÎÄ¼şµÄ´æ´¢
+
+
+private slots:
+    void on_brushColorComboBox_currentIndexChanged(int index);
+    void on_penColorComboBox_currentIndexChanged(int index);
+    void on_penWidthSpinBox_valueChanged(int );
+    void on_penStyleComboBox_currentIndexChanged(QString );
+    void on_shapeComboBox_currentIndexChanged(QString );
+    void on_action_11_triggered();
+    void on_action_10_triggered();
+    void on_action_8_triggered();
+    void on_action_7_triggered();
+    void on_action_6_triggered();
+    void on_action_5_triggered();
+    void on_action_4_triggered();
+    void on_action_P_triggered();
+    void on_action_X_triggered();
+    void on_action_A_triggered();
+    void on_action_S_triggered();
+    void on_action_O_triggered();
+    void on_action_N_triggered();
 };
 
 #endif // MAINWINDOW_H

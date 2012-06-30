@@ -12,12 +12,15 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    paintarea.cpp
+    paintarea.cpp \
+    donewdialog.cpp
 
 HEADERS  += mainwindow.h \
-    paintarea.h
+    paintarea.h \
+    donewdialog.h
 
-FORMS    += mainwindow.ui
+FORMS    += mainwindow.ui \
+    donewdialog.ui
 
 OTHER_FILES +=
 
